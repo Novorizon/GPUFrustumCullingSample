@@ -1,0 +1,46 @@
+﻿
+#pragma kernel FrustumCulling
+
+// Create a RenderTexture with enableRandomWrite flag and set it
+// with cs.SetTexture
+
+StructuredBuffer<float3> posAllBuffer;
+RWStructuredBuffer<float3> posVisibleBuffer;
+RWStructuredBuffer<int> bufferWithArgs;
+RWTexture2DArray<float3> posTexture;
+RWTexture2D<float>  posTexture1;
+Texture2D<float>  posTexture2;
+float3 cmrPos;
+float3 cmrDir;
+float cmrHalfFov;
+float4x4 matrix_VP;
+int		textureWidth;
+
+inline int2 texCoord(int  index, uint width)
+{
+	return int2(index % width, index / width);
+}
+
+[numthreads(64, 1, 1)]
+void FrustumCulling(uint3 id : SV_DispatchThreadID) {
+    uint index = id.x;
+    float3 itemPos = posAllBuffer[index];
+    //float3 itemDir = normalize(itemPos - cmrPos);
+    //float rot = dot(cmrDir, itemDir);
+
+    
+    float4 clipPos = mul(matrix_VP, float4(itemPos - cmrDir * 0.2, 1));
+    
+
+    if (max(abs(clipPos.x), abs(clipPos.y)) > clipPos.w + 0.7)return;
+
+    
+    
+    int currentIndex;
+    InterlockedAdd(bufferWithArgs[1], 1, currentIndex);
+    posVisibleBuffer[currentIndex] = itemPos;
+    int2 visPos = texCoord(currentIndex, textureWidth);
+    //posTexture[visPos] = itemPos;
+			//posTexture[int3(visPos, 0)] = itemPos;
+   //         posTexture1[visPos]=itemPos;
+}
